@@ -1,5 +1,7 @@
 'use strict';
 
+require('babel-register')
+require("babel-polyfill")
 var AV = require('leanengine');
 
 AV.init({
