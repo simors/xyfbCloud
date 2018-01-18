@@ -72,23 +72,47 @@ export async function reqUserInfo(request) {
 
 /**
  * 根据用户的unionid获取用户信息
- * @param unionid
+ * @param authData
  */
-export async function getUserByUnionid(unionid) {
+export async function getUserByUnionid(authData) {
   let query = new AV.Query('_User')
-  query.equalTo('unionid', unionid)
+  query.equalTo('unionid', authData.unionid)
+  let user = await query.first()
+  return constructUser(user)
+}
+
+/**
+ * 根据用户小程序的openid获取用户信息
+ * @param authData
+ */
+export async function getUserByWeappOpenid(authData) {
+  let query = new AV.Query('_User')
+  if (authData.uid) {
+    query.equalTo('authData.lc_weapp_union.openid', authData.openid)
+  } else {
+    query.equalTo('authData.lc_weapp.openid', authData.openid)
+  }
   let user = await query.first()
   return constructUser(user)
 }
 
 export async function createUserByWeappAuthData(authData) {
   let leanUser = new AV.User()
-  leanUser.set('username', authData.uid)
-  leanUser.set('unionid', authData.uid)
-  return await leanUser.associateWithAuthData(authData, 'lc_weapp_union')
+  if (authData.uid) {
+    leanUser.set('username', authData.uid)
+    leanUser.set('unionid', authData.uid)
+    return await leanUser.associateWithAuthData(authData, 'lc_weapp_union')
+  } else {
+    leanUser.set('username', authData.openid)
+    return await leanUser.associateWithAuthData(authData, 'lc_weapp')
+  }
 }
 
 export async function associateUserWithWeappAuthData(userId, authData) {
   let user = AV.Object.createWithoutData('_User', userId)
-  return await user.associateWithAuthData(authData, 'lc_weapp_union')
+  if (authData.uid) {
+    return await user.associateWithAuthData(authData, 'lc_weapp_union')
+  } else {
+    return await user.associateWithAuthData(authData, 'lc_weapp')
+  }
 }

@@ -3,7 +3,7 @@
  */
 import AV from 'leancloud-storage'
 import * as errno from '../errno'
-import {getUserByUnionid, createUserByWeappAuthData, associateUserWithWeappAuthData} from '../user'
+import {getUserByUnionid, getUserByWeappOpenid, createUserByWeappAuthData, associateUserWithWeappAuthData} from '../user'
 let urllib = require('urllib')
 let crypto = require('crypto')
 
@@ -54,14 +54,22 @@ export async function getWeappAuthData(request) {
   let authData = await getWeappAccessToken(appid, secret, code)
   authData = {
     openid: authData.openid,
-    uid: authData.unionid,
     session_key: authData.session_key
   }
-  if (!authData.uid) {
+  if (!authData.unionid) {
     let data = decryptData(appid, authData.session_key, encryptedData , iv)
-    authData.uid = data.unionId
+    if (data.unionId) {
+      authData.uid = data.unionId
+    }
+  } else {
+    authData.uid = authData.unionid
   }
-  let user = await getUserByUnionid(authData.uid)
+  let user = undefined
+  if (!authData.uid) {
+    user = await getUserByWeappOpenid(authData)
+  } else {
+    user = await getUserByUnionid(authData)
+  }
   if (!user) {
     await createUserByWeappAuthData(authData)
   } else {
