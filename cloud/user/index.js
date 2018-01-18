@@ -76,7 +76,7 @@ export async function reqUserInfo(request) {
  */
 export async function getUserByUnionid(authData) {
   let query = new AV.Query('_User')
-  query.equalTo('unionid', authData.unionid)
+  query.equalTo('unionid', authData.uid)
   let user = await query.first()
   return constructUser(user)
 }
