@@ -2,6 +2,7 @@ var AV = require('leanengine');
 import * as userCloud from './cloud/user'
 import * as weappCloud from './cloud/weapp'
 import * as payCloud from './cloud/pay'
+import * as fubaoCloud from './cloud/fubao'
 
 /* 用户 */
 AV.Cloud.define('userUpdateInfo', userCloud.updateUserInfo);
@@ -22,3 +23,6 @@ AV.Cloud.define('payFuncTest', payCloud.payFuncTest)
 AV.Cloud.define('payGetWalletInfo', payCloud.reqWalletInfo)
 AV.Cloud.define('payWithWalletBalance', payCloud.payWithWalletBalance)
 AV.Cloud.define('payFetchUserDealRecords', payCloud.fetchUserDealRecords)
+
+/* 福包 */
+AV.Cloud.define('fubaoGetLastFubao', fubaoCloud.getUserLastFubao)

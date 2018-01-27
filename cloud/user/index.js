@@ -3,6 +3,7 @@
  */
 import AV from 'leanengine'
 import * as errno from '../errno'
+import moment from 'moment'
 
 export function constructUser(leanUser) {
   let user = {}
@@ -11,8 +12,8 @@ export function constructUser(leanUser) {
   }
   let leanUserAttr = leanUser.attributes
   user.id = leanUser.id
-  user.createdAt = leanUser.createdAt
-  user.updatedAt = leanUser.updatedAt
+  user.createdAt = moment(new Date(leanUser.createdAt)).format('YYYY-MM-DD HH:mm:ss')
+  user.updatedAt = moment(new Date(leanUser.updatedAt)).format('YYYY-MM-DD HH:mm:ss')
   user.nickname = leanUserAttr.nickname
   user.username = leanUserAttr.username
   user.avatar = leanUserAttr.avatar
