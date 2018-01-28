@@ -5,6 +5,7 @@ import AV from 'leancloud-storage'
 import * as errno from '../errno'
 import moment from 'moment'
 import {constructUser} from '../user'
+import {winMoney} from '../pay'
 
 const HIT_FACTOR = 3       // 中奖因子，如设置为5，则表示中奖概率为1/5
 
@@ -93,7 +94,7 @@ export async function getUserLastLuckyDip(request) {
 }
 
 /**
- *
+ * 获取到用户发送的福包抽奖箱
  * @param request
  * @returns {Array}
  */
@@ -225,6 +226,7 @@ export async function execDrawLottery(request) {
   if (money != 0) {
     await updateLuckyDipBalance(luckyDipId, money)
     await addNewFubao(currentUser.id, luckyDipId, money)
+    await winMoney(currentUser.id, money)
     return {money}
   }
   return {money: 0}

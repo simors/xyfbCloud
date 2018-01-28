@@ -16,8 +16,9 @@ import {createLuckyDip} from '../fubao'
 var pingpp = Pingpp(PINGPP_API_KEY)
 
 const DEAL_TYPE = {
-  SEND_RD_PAY: 1,   // 发红包
-  WITHDRAW: 2,      // 提现
+  SEND_FUBAO: 1,    // 发福包
+  RECV_FUBAO: 2,    // 抢到福包
+  WITHDRAW: 3,      // 提现
 }
 
 // 钱包余额操作类型
@@ -195,7 +196,7 @@ export async function handlePaymentWebhootsEvent(request) {
     await mysqlUtil.beginTransaction(mysqlConn)
     await addDealRecord(mysqlConn, deal)
     switch (dealType) {
-      case DEAL_TYPE.SEND_RD_PAY:
+      case DEAL_TYPE.SEND_FUBAO:
         await createLuckyDip(fromUser, amount, metadata.count, metadata.remark)
         break
       default:
@@ -399,6 +400,47 @@ async function updateBalance(conn, userId, cost, type) {
     return updateRes.results
   } catch (e) {
     throw e
+  }
+}
+
+/**
+ * 中奖后，更新用户的钱包信息
+ * @param userId
+ * @param money
+ */
+export async function winMoney(userId, money) {
+  if(!userId) {
+    throw new AV.Cloud.Error('参数错误', {code: errno.EINVAL})
+  }
+  let mysqlConn = undefined
+  let walletInfo = await getWalletInfo(userId)
+  
+  try {
+    mysqlConn = await mysqlUtil.getConnection()
+    await mysqlUtil.beginTransaction(mysqlConn)
+    await updateBalance(mysqlConn, userId, money, WALLET_OPER.INCREMENT)
+    var deal = {
+      from: 'platform',
+      to: userId,
+      cost: money,
+      deal_type: DEAL_TYPE.RECV_FUBAO,
+      charge_id: '',
+      order_no: uuidv4().replace(/-/g, '').substr(0, 16),
+      channel: '',
+      transaction_no: ''
+    }
+    await addDealRecord(mysqlConn, deal)
+    await mysqlUtil.commit(mysqlConn)
+  } catch (error) {
+    console.error("winMoney", error)
+    if(mysqlConn) {
+      await mysqlUtil.rollback(mysqlConn)
+    }
+    throw error
+  } finally {
+    if (mysqlConn) {
+      await mysqlUtil.release(mysqlConn)
+    }
   }
 }
 
