@@ -151,5 +151,7 @@ export const ERROR_IN_WITHDRAW_PROCESS      = (ERROR_BASE_PAY - 6)         /* �
 export const ERROR_PAY_INNER_PROCESS        = (ERROR_BASE_PAY - 7)         /* 支付内部异常 */
 
 // 抽奖
-export const ERROR_LUCKYDIP_NOT_EXIST       = (ERROR_BASE_FUBAO - 1)        /* 抽奖箱不存在 */
-export const ERROR_LUCKYDIP_GAME_OVER       = (ERROR_BASE_FUBAO - 2)        /* 所有奖券被抽完 */
+export const ERROR_LUCKYDIP_NOT_EXIST           = (ERROR_BASE_FUBAO - 1)        /* 抽奖箱不存在 */
+export const ERROR_LUCKYDIP_GAME_OVER           = (ERROR_BASE_FUBAO - 2)        /* 所有奖券被抽完 */
+export const ERROR_LUCKYDIP_EXPIRE              = (ERROR_BASE_FUBAO - 3)        /* 福包抽奖已过期 */
+export const ERROR_LUCKYDIP_PARTICIPANT_OVER    = (ERROR_BASE_FUBAO - 4)        /* 福包抽奖参与次数已耗尽 */

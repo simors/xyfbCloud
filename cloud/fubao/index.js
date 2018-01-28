@@ -8,6 +8,7 @@ import {constructUser} from '../user'
 import {winMoney} from '../pay'
 
 const HIT_FACTOR = 3       // 中奖因子，如设置为5，则表示中奖概率为1/5
+const DEFAULT_PARTICIPANT_NUM = 3     // 默认的抽奖次数
 
 function constructLuckyDip(leanLuckyDip, includeUser) {
   if (!leanLuckyDip) {
@@ -24,6 +25,7 @@ function constructLuckyDip(leanLuckyDip, includeUser) {
   luckyDip.balance = luckyDipAttr.balance
   luckyDip.remain = luckyDipAttr.remain
   luckyDip.userId = luckyDipAttr.user ? luckyDipAttr.user.id : undefined
+  luckyDip.isExpire = luckyDipAttr.isExpire
   
   if (includeUser) {
     luckyDip.user = constructUser(luckyDipAttr.user)
@@ -216,12 +218,27 @@ async function updateLuckyDipBalance(luckyDipId, money) {
  * 执行福包抽奖
  * @param request
  */
-export async function execDrawLottery(request) {
+export async function reqDrawLottery(request) {
   let currentUser = request.currentUser
   if (!currentUser) {
     throw new AV.Cloud.Error('Permission denied, need to login first', {code: errno.EACCES});
   }
   let {luckyDipId} = request.params
+  let luckyDip = await getLuckyDipById(luckyDipId, false)
+  if (luckyDip.isExpire) {
+    throw new AV.Cloud.Error('The lucky dip is expire', {code: errno.ERROR_LUCKYDIP_EXPIRE});
+  }
+  let luckyDipUser = await getLuckyDipUser(currentUser.id, luckyDipId)
+  if (!luckyDipUser) {
+    luckyDipUser = await insertLuckyDipUser(currentUser.id, luckyDipId)
+    await incLuckyDipParticipantNum(luckyDipUser)
+  } else {
+    if (luckyDipUser.attributes.participateNum >= luckyDipUser.attributes.maxParticipateNum) {
+      throw new AV.Cloud.Error('The number of participant over', {code: errno.ERROR_LUCKYDIP_PARTICIPANT_OVER});
+    } else {
+      await incLuckyDipParticipantNum(luckyDipUser)
+    }
+  }
   let money = await drawLottery(luckyDipId)
   if (money != 0) {
     await updateLuckyDipBalance(luckyDipId, money)
@@ -282,4 +299,48 @@ export async function fetchRecvedFubao(request) {
     fubaos.push(constructFubao(fubao, true, true))
   })
   return fubaos
+}
+
+/**
+ * 根据用户id和抽奖箱id获取对应的用户参与抽奖信息
+ * @param userId
+ * @param luckyDipId
+ * @returns {*|Promise}
+ */
+async function getLuckyDipUser(userId, luckyDipId) {
+  let query = new AV.Query('LuckyDipUser')
+  let user = AV.Object.createWithoutData('_User', userId)
+  let luckyDip = AV.Object.createWithoutData('LuckyDip', luckyDipId)
+  query.equalTo('user', user)
+  query.equalTo('luckyDip', luckyDip)
+  return await query.first()
+}
+
+/**
+ * 插入一条新的参与记录
+ * @param userId
+ * @param luckyDipId
+ * @returns {*}
+ */
+async function insertLuckyDipUser(userId, luckyDipId) {
+  let LuckyDipUser = AV.Object.extend('LuckyDipUser')
+  let luckyDipUser = new LuckyDipUser()
+  
+  let user = AV.Object.createWithoutData('_User', userId)
+  let luckyDip = AV.Object.createWithoutData('LuckyDip', luckyDipId)
+  luckyDipUser.set('user', user)
+  luckyDipUser.set('luckyDip', luckyDip)
+  luckyDipUser.set('participateNum', 0)
+  luckyDipUser.set('maxParticipateNum', DEFAULT_PARTICIPANT_NUM)
+  return await luckyDipUser.save()
+}
+
+/**
+ * 增加用户参与抽奖次数
+ * @param luckyDipUser
+ * @returns {*}
+ */
+async function incLuckyDipParticipantNum(luckyDipUser) {
+  luckyDipUser.increment('participateNum')
+  return await luckyDipUser.save()
 }
