@@ -4,10 +4,11 @@
 import AV from 'leancloud-storage'
 import * as errno from '../errno'
 import moment from 'moment'
+import {constructUser} from '../user'
 
 const HIT_FACTOR = 3       // 中奖因子，如设置为5，则表示中奖概率为1/5
 
-function constructLuckyDip(leanLuckyDip) {
+function constructLuckyDip(leanLuckyDip, includeUser) {
   if (!leanLuckyDip) {
     return undefined
   }
@@ -22,7 +23,33 @@ function constructLuckyDip(leanLuckyDip) {
   luckyDip.balance = luckyDipAttr.balance
   luckyDip.remain = luckyDipAttr.remain
   luckyDip.userId = luckyDipAttr.user ? luckyDipAttr.user.id : undefined
+  
+  if (includeUser) {
+    luckyDip.user = constructUser(luckyDipAttr.user)
+  }
   return luckyDip
+}
+
+function constructFubao(leanFubao, includeUser, includeLuckyDip) {
+  if (!leanFubao) {
+    return undefined
+  }
+  let fubao = {}
+  let fubaoAttr = leanFubao.attributes
+  fubao.id = leanFubao.id
+  fubao.createdAt = moment(new Date(leanFubao.createdAt)).format('YYYY-MM-DD HH:mm:ss')
+  fubao.updatedAt = moment(new Date(leanFubao.updatedAt)).format('YYYY-MM-DD HH:mm:ss')
+  fubao.money = fubaoAttr.money
+  fubao.userId = fubaoAttr.user ? fubaoAttr.user.id : undefined
+  fubao.luckyDipId = fubaoAttr.luckyDip ? fubaoAttr.luckyDip.id : undefined
+  
+  if (includeUser) {
+    fubao.user = constructUser(fubaoAttr.user)
+  }
+  if (includeLuckyDip) {
+    fubao.luckyDip = constructLuckyDip(fubaoAttr.luckyDip, false)
+  }
+  return fubao
 }
 
 /**
@@ -62,7 +89,38 @@ export async function getUserLastLuckyDip(request) {
   query.equalTo('user', currentUser)
   query.descending('createdAt')
   let luckyDip = await query.first()
-  return constructLuckyDip(luckyDip)
+  return constructLuckyDip(luckyDip, false)
+}
+
+/**
+ *
+ * @param request
+ * @returns {Array}
+ */
+export async function fetchSendLuckyDip(request) {
+  let currentUser = request.currentUser
+  if (!currentUser) {
+    throw new AV.Cloud.Error('Permission denied, need to login first', {code: errno.EACCES});
+  }
+  
+  let {lastTime, limit} = request.params
+  let query = new AV.Query('LuckyDip')
+  query.descending('createdAt')
+  if (limit) {
+    query.limit(limit)
+  } else {
+    query.limit(10)
+  }
+  if (lastTime) {
+    query.lessThan('createdAt', new Date(lastTime))
+  }
+  
+  let result = await query.find()
+  let luckyDips = []
+  result.forEach((luckyDip) => {
+    luckyDips.push(constructLuckyDip(luckyDip, false))
+  })
+  return luckyDips
 }
 
 /**
@@ -70,10 +128,13 @@ export async function getUserLastLuckyDip(request) {
  * @param luckyDipId
  * @returns {*|Promise.<AV.Object>}
  */
-async function getLuckyDipById(luckyDipId) {
+async function getLuckyDipById(luckyDipId, includeUser) {
   let query = new AV.Query('LuckyDip')
+  if (includeUser) {
+    query.include('user')
+  }
   let luckyDip = await query.get(luckyDipId)
-  luckyDip = constructLuckyDip(luckyDip)
+  luckyDip = constructLuckyDip(luckyDip, includeUser)
   return luckyDip
 }
 
@@ -82,7 +143,7 @@ async function getLuckyDipById(luckyDipId) {
  * @param luckyDipId
  */
 async function drawLottery(luckyDipId) {
-  let luckyDip = await getLuckyDipById(luckyDipId)
+  let luckyDip = await getLuckyDipById(luckyDipId, false)
   if (!luckyDip) {
     throw new AV.Cloud.Error('Lucky dip not exist', {code: errno.ERROR_LUCKYDIP_NOT_EXIST});
   }
@@ -163,7 +224,60 @@ export async function execDrawLottery(request) {
   let money = await drawLottery(luckyDipId)
   if (money != 0) {
     await updateLuckyDipBalance(luckyDipId, money)
+    await addNewFubao(currentUser.id, luckyDipId, money)
     return {money}
   }
   return {money: 0}
+}
+
+/**
+ * 添加一条领取福包的记录
+ * @param userId
+ * @param luckyDipId
+ * @param money
+ * @returns {*}
+ */
+async function addNewFubao(userId, luckyDipId, money) {
+  let Fubao = AV.Object.extend('Fubao')
+  let fubao = new Fubao()
+  
+  let user = AV.Object.createWithoutData('_User', userId)
+  let luckyDip = AV.Object.createWithoutData('LuckyDip', luckyDipId)
+  fubao.set('user', user)
+  fubao.set('money', money)
+  fubao.set('luckyDip', luckyDip)
+  return await fubao.save()
+}
+
+/**
+ * 获取到用户收到的福包记录
+ * @param request
+ * @returns {Array}
+ */
+export async function fetchRecvedFubao(request) {
+  let currentUser = request.currentUser
+  if (!currentUser) {
+    throw new AV.Cloud.Error('Permission denied, need to login first', {code: errno.EACCES});
+  }
+  
+  let {lastTime, limit} = request.params
+  let query = new AV.Query('Fubao')
+  query.equalTo('user', currentUser)
+  query.descending('createdAt')
+  if (limit) {
+    query.limit(limit)
+  } else {
+    query.limit(10)
+  }
+  if (lastTime) {
+    query.lessThan('createdAt', new Date(lastTime))
+  }
+  query.include(['user', 'luckyDip'])
+  
+  let result = await query.find()
+  let fubaos = []
+  result.forEach((fubao) => {
+    fubaos.push(constructFubao(fubao, true, true))
+  })
+  return fubaos
 }
