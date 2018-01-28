@@ -11,7 +11,7 @@ import moment from 'moment'
 import mysqlUtil from '../mysqlUtil'
 import {getUserInfoById} from '../user'
 import {PINGPP_APP_ID, PINGPP_API_KEY} from '../../config'
-import {createFubao} from '../fubao'
+import {createLuckyDip} from '../fubao'
 
 var pingpp = Pingpp(PINGPP_API_KEY)
 
@@ -196,7 +196,7 @@ export async function handlePaymentWebhootsEvent(request) {
     await addDealRecord(mysqlConn, deal)
     switch (dealType) {
       case DEAL_TYPE.SEND_RD_PAY:
-        await createFubao(fromUser, amount, metadata.count, metadata.remark)
+        await createLuckyDip(fromUser, amount, metadata.count, metadata.remark)
         break
       default:
         console.error('unsupported deal type!')

@@ -25,4 +25,5 @@ AV.Cloud.define('payWithWalletBalance', payCloud.payWithWalletBalance)
 AV.Cloud.define('payFetchUserDealRecords', payCloud.fetchUserDealRecords)
 
 /* 福包 */
-AV.Cloud.define('fubaoGetLastFubao', fubaoCloud.getUserLastFubao)
+AV.Cloud.define('fubaoGetLastFubao', fubaoCloud.getUserLastLuckyDip)
+AV.Cloud.define('fubaoExecDrawLottery', fubaoCloud.execDrawLottery)

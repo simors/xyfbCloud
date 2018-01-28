@@ -138,14 +138,18 @@ export const EHWPOISON          =   -133;       /* Memory page has hardware erro
 
 export const ERROR_BASE               =   1000;
 export const ERROR_BASE_USER          =   -(ERROR_BASE);
-export const ERROR_BASE_VOTE          =   -(ERROR_BASE + 1000)
+export const ERROR_BASE_FUBAO         =   -(ERROR_BASE + 1000)
 export const ERROR_BASE_PAY           =   -(ERROR_BASE + 2000)
 
 // 支付
 export const ERROR_UNSUPPORT_CHANNEL        = (ERROR_BASE_PAY - 1)         /* 不支持的支付渠道 */
 export const ERROR_CREATE_TRANSFER          = (ERROR_BASE_PAY - 2)         /* 创建交易请求失败 */
 export const ERROR_CREATE_CHARGES           = (ERROR_BASE_PAY - 3)         /* 创建支付请求失败 */
-export const ERROR_NO_WECHAT                = (ERROR_BASE_PAY - 4)         /* 没有钱包信息     */
-export const ERROR_NOT_ENOUGH_MONEY         = (ERROR_BASE_PAY - 5)         /* 余额不足        */
-export const ERROR_IN_WITHDRAW_PROCESS      = (ERROR_BASE_PAY - 6)         /* 提现处理中      */
-export const ERROR_PAY_INNER_PROCESS        = (ERROR_BASE_PAY - 7)         /* 支付内部异常      */
+export const ERROR_NO_WECHAT                = (ERROR_BASE_PAY - 4)         /* 没有钱包信息 */
+export const ERROR_NOT_ENOUGH_MONEY         = (ERROR_BASE_PAY - 5)         /* 余额不足 */
+export const ERROR_IN_WITHDRAW_PROCESS      = (ERROR_BASE_PAY - 6)         /* 提现处理中 */
+export const ERROR_PAY_INNER_PROCESS        = (ERROR_BASE_PAY - 7)         /* 支付内部异常 */
+
+// 抽奖
+export const ERROR_LUCKYDIP_NOT_EXIST       = (ERROR_BASE_FUBAO - 1)        /* 抽奖箱不存在 */
+export const ERROR_LUCKYDIP_GAME_OVER       = (ERROR_BASE_FUBAO - 2)        /* 所有奖券被抽完 */
