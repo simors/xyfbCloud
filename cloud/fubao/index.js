@@ -4,8 +4,10 @@
 import AV from 'leancloud-storage'
 import * as errno from '../errno'
 import moment from 'moment'
+import amqp from 'amqplib'
 import {constructUser} from '../user'
 import {winMoney} from '../pay'
+import {RABBITMQ_URL, NODE_ID} from '../../config'
 
 const HIT_FACTOR = 3       // 中奖因子，如设置为5，则表示中奖概率为1/5
 const DEFAULT_PARTICIPANT_NUM = 3     // 默认的抽奖次数
@@ -244,6 +246,68 @@ export async function reqDrawLottery(request) {
     await updateLuckyDipBalance(luckyDipId, money)
     await addNewFubao(currentUser.id, luckyDipId, money)
     await winMoney(currentUser.id, money)
+    return {money}
+  }
+  return {money: 0}
+}
+
+/**
+ * 发起抽奖请求
+ * @param socketId
+ * @param userId
+ * @param luckyDipId
+ */
+export async function requestDrawLottery(socketId, userId, luckyDipId) {
+  let luckyDip = await getLuckyDipById(luckyDipId, false)
+  if (luckyDip.isExpire) {
+    throw new AV.Cloud.Error('The lucky dip is expire', {code: errno.ERROR_LUCKYDIP_EXPIRE});
+  }
+  let luckyDipUser = await getLuckyDipUser(userId, luckyDipId)
+  if (!luckyDipUser) {
+    luckyDipUser = await insertLuckyDipUser(userId, luckyDipId)
+    await incLuckyDipParticipantNum(luckyDipUser)
+  } else {
+    if (luckyDipUser.attributes.participateNum >= luckyDipUser.attributes.maxParticipateNum) {
+      throw new AV.Cloud.Error('The number of participant over', {code: errno.ERROR_LUCKYDIP_PARTICIPANT_OVER});
+    } else {
+      await incLuckyDipParticipantNum(luckyDipUser)
+    }
+  }
+  
+  let ex = 'draw_lottery'
+  let message = {
+    socketId: socketId,
+    userId: userId,
+    luckyDipId: luckyDipId,
+    nodeId: NODE_ID,
+  }
+  return amqp.connect(RABBITMQ_URL).then(function(conn) {
+    return conn.createChannel().then(function(ch) {
+      var ok = ch.assertExchange(ex, 'fanout', {durable: false})
+      
+      return ok.then(function() {
+        console.log("publish:", message)
+        ch.publish(ex, '', Buffer.from(JSON.stringify(message)));
+        return ch.close();
+      });
+    }).finally(function() { conn.close(); });
+  }).catch((error) => {
+    throw error
+  })
+}
+
+/**
+ * 执行抽奖
+ * @param userId
+ * @param luckyDipId
+ * @returns {*}
+ */
+export async function execDrawLottery(userId, luckyDipId) {
+  let money = await drawLottery(luckyDipId)
+  if (money != 0) {
+    await updateLuckyDipBalance(luckyDipId, money)
+    await addNewFubao(userId, luckyDipId, money)
+    await winMoney(userId, money)
     return {money}
   }
   return {money: 0}

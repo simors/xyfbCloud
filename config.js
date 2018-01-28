@@ -17,3 +17,6 @@ export const REDIS_URL = process.env.REDIS_URL
 export const REDIS_PORT = process.env.REDIS_PORT
 export const REDIS_AUTH = process.env.REDIS_AUTH
 export const REDIS_DB = process.env.REDIS_DB
+
+const uuidv4 = require('uuid/v4')
+export const NODE_ID = uuidv4()

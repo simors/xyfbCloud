@@ -3,6 +3,7 @@
 require('babel-register')
 require("babel-polyfill")
 var AV = require('leanengine');
+var socketConnectEvent = require('./websocket').socketConnectEvent
 
 AV.init({
   appId: process.env.LEANCLOUD_APP_ID,
@@ -14,6 +15,20 @@ AV.init({
 AV.Cloud.useMasterKey();
 
 var app = require('./app');
+
+//websocket
+var websocketIO = require('./websocketIO')
+// websocketIO.sockets.on('connection', socketConnectEvent)
+
+websocketIO.on('connection', function(socket){
+  console.log('a user connected');
+  socket.on('disconnect', function(){
+    console.log('user disconnected');
+  });
+});
+
+//rabbitMQ
+var amqp = require('./amqp')
 
 // 端口一定要从环境变量 `LEANCLOUD_APP_PORT` 中获取。
 // LeanEngine 运行时会分配端口并赋值到该变量。
