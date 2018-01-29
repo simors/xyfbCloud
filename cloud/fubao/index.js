@@ -253,11 +253,10 @@ export async function reqDrawLottery(request) {
 
 /**
  * 发起抽奖请求
- * @param socketId
  * @param userId
  * @param luckyDipId
  */
-export async function requestDrawLottery(socketId, userId, luckyDipId) {
+export async function requestDrawLottery(userId, luckyDipId) {
   let luckyDip = await getLuckyDipById(luckyDipId, false)
   if (luckyDip.isExpire) {
     throw new AV.Cloud.Error('The lucky dip is expire', {code: errno.ERROR_LUCKYDIP_EXPIRE});
@@ -274,9 +273,8 @@ export async function requestDrawLottery(socketId, userId, luckyDipId) {
     }
   }
   
-  let ex = 'draw_lottery'
+  let ex = 'draw_lottery' + luckyDipId
   let message = {
-    socketId: socketId,
     userId: userId,
     luckyDipId: luckyDipId,
     nodeId: NODE_ID,

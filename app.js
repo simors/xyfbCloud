@@ -7,13 +7,14 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var AV = require('leanengine');
 var expressWs = require('express-ws');
+var REQUEST_DRAW_LOTTERY = require('./socketMsgType').REQUEST_DRAW_LOTTERY
+var websocketIO = require('./websocketIO')
+var socketDrawLotteryEvent = require('./websocket').socketDrawLotteryEvent
 
 // 加载云函数定义，你可以将云函数拆分到多个文件方便管理，但需要在主文件中加载它们
 require('./cloud');
 
 var app = express();
-
-var webSockets = {}
 
 // ws中间件
 expressWs(app);
@@ -45,20 +46,23 @@ app.get('/', function(req, res) {
 // 可以将一类的路由单独保存在一个文件中
 app.use('/todos', require('./routes/todos'));
 
-app.ws('/echo/:userId', function(ws, req) {
+app.ws('/operation/:userId', function(ws, req) {
   var userID = undefined
-  console.log('req', req.params)
   userID = req.params.userId
-  webSockets[userID] = ws
-  console.log('connected: ' + userID + ' in ' + Object.getOwnPropertyNames(webSockets))
+  websocketIO[userID] = ws
   
   ws.on('message', function(msg) {
-    ws.send(msg);
+    let msgObj = JSON.parse(msg)
+    switch (msgObj.type) {
+      case REQUEST_DRAW_LOTTERY:
+        socketDrawLotteryEvent(ws, msgObj.userId, msgObj.luckyDipId)
+        break
+      default:
+    }
   });
   
   ws.on('close', function () {
-    delete webSockets[userID]
-    console.log('deleted: ' + userID)
+    delete websocketIO[userID]
   })
 });
 
