@@ -263,13 +263,10 @@ export async function requestDrawLottery(userId, luckyDipId) {
   }
   let luckyDipUser = await getLuckyDipUser(userId, luckyDipId)
   if (!luckyDipUser) {
-    luckyDipUser = await insertLuckyDipUser(userId, luckyDipId)
-    await incLuckyDipParticipantNum(luckyDipUser)
+    await insertLuckyDipUser(userId, luckyDipId)
   } else {
     if (luckyDipUser.attributes.participateNum >= luckyDipUser.attributes.maxParticipateNum) {
       throw new AV.Cloud.Error('The number of participant over', {code: errno.ERROR_LUCKYDIP_PARTICIPANT_OVER});
-    } else {
-      await incLuckyDipParticipantNum(luckyDipUser)
     }
   }
   
@@ -301,6 +298,10 @@ export async function requestDrawLottery(userId, luckyDipId) {
  * @returns {*}
  */
 export async function execDrawLottery(userId, luckyDipId) {
+  let luckyDipUser = await getLuckyDipUser(userId, luckyDipId)
+  if (luckyDipUser) {
+    await incLuckyDipParticipantNum(luckyDipUser)
+  }
   let money = await drawLottery(luckyDipId)
   if (money != 0) {
     await updateLuckyDipBalance(luckyDipId, money)
