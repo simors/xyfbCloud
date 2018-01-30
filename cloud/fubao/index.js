@@ -389,7 +389,8 @@ export async function fetchFubaoJoinUsers(request) {
   let {luckyDipId} = request.params
   
   let query = new AV.Query('Fubao')
-  query.equalTo('luckyDip', luckyDipId)
+  let luckyDip = AV.Object.createWithoutData('LuckyDip', luckyDipId)
+  query.equalTo('luckyDip', luckyDip)
   query.include('user')
   query.limit(100)
   
