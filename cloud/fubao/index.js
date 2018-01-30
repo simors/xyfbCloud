@@ -243,10 +243,11 @@ async function updateLuckyDipBalance(luckyDipId, money) {
 }
 
 /**
- * 执行福包抽奖
+ * 判断是否可以进行抽奖
  * @param request
+ * @returns {boolean}
  */
-export async function reqDrawLottery(request) {
+export async function judgeEnabelDrawLottery(request) {
   let currentUser = request.currentUser
   if (!currentUser) {
     throw new AV.Cloud.Error('Permission denied, need to login first', {code: errno.EACCES});
@@ -256,25 +257,14 @@ export async function reqDrawLottery(request) {
   if (luckyDip.isExpire) {
     throw new AV.Cloud.Error('The lucky dip is expire', {code: errno.ERROR_LUCKYDIP_EXPIRE});
   }
+  if (luckyDip.remain === 0) {
+    throw new AV.Cloud.Error('Fubao game over', {code: errno.ERROR_LUCKYDIP_GAME_OVER});
+  }
   let luckyDipUser = await getLuckyDipUser(currentUser.id, luckyDipId)
-  if (!luckyDipUser) {
-    luckyDipUser = await insertLuckyDipUser(currentUser.id, luckyDipId)
-    await incLuckyDipParticipantNum(luckyDipUser)
-  } else {
-    if (luckyDipUser.attributes.participateNum >= luckyDipUser.attributes.maxParticipateNum) {
-      throw new AV.Cloud.Error('The number of participant over', {code: errno.ERROR_LUCKYDIP_PARTICIPANT_OVER});
-    } else {
-      await incLuckyDipParticipantNum(luckyDipUser)
-    }
+  if (luckyDipUser && luckyDipUser.attributes.participateNum >= luckyDipUser.attributes.maxParticipateNum) {
+    throw new AV.Cloud.Error('The number of participant over', {code: errno.ERROR_LUCKYDIP_PARTICIPANT_OVER});
   }
-  let money = await drawLottery(luckyDipId)
-  if (money != 0) {
-    await updateLuckyDipBalance(luckyDipId, money)
-    await addNewFubao(currentUser.id, luckyDipId, money)
-    await winMoney(currentUser.id, money)
-    return {money}
-  }
-  return {money: 0}
+  return true
 }
 
 /**
