@@ -77,7 +77,23 @@ export async function createLuckyDip(userId, amount, count, remark) {
   luckyDip.set('balance', amount)
   luckyDip.set('remain', count)
   
-  return await luckyDip.save()
+  let leanLuckyDip = await luckyDip.save()
+  return constructLuckyDip(leanLuckyDip, false)
+}
+
+/**
+ * 创建一个福包抽奖箱的网络请求
+ * @param request
+ * @returns {*}
+ */
+export async function reqCreateLuckyDip(request) {
+  let currentUser = request.currentUser
+  if (!currentUser) {
+    throw new AV.Cloud.Error('Permission denied, need to login first', {code: errno.EACCES});
+  }
+  
+  let {amount, count, remark} = request.params
+  return await createLuckyDip(currentUser.id, amount, count, remark)
 }
 
 /**
