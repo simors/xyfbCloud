@@ -126,6 +126,7 @@ export async function fetchSendLuckyDip(request) {
   
   let {lastTime, limit} = request.params
   let query = new AV.Query('LuckyDip')
+  query.equalTo('user', currentUser)
   query.descending('createdAt')
   if (limit) {
     query.limit(limit)
