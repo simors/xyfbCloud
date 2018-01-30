@@ -144,6 +144,16 @@ async function getLuckyDipById(luckyDipId, includeUser) {
 }
 
 /**
+ * 根据id获取抽奖箱的网络请求方法
+ * @param request
+ * @returns {*|Promise.<AV.Object>}
+ */
+export async function reqLuckyDipById(request) {
+  let {luckyDipId} = request.params
+  return await getLuckyDipById(luckyDipId, true)
+}
+
+/**
  * 完成福包摇奖操作
  * @param luckyDipId
  */

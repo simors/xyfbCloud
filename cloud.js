@@ -26,6 +26,7 @@ AV.Cloud.define('payFetchUserDealRecords', payCloud.fetchUserDealRecords)
 
 /* 福包 */
 AV.Cloud.define('fubaoGetLastFubao', fubaoCloud.getUserLastLuckyDip)
+AV.Cloud.define('fubaoFetchLuckyDipById', fubaoCloud.reqLuckyDipById)
 AV.Cloud.define('fubaoReqDrawLottery', fubaoCloud.reqDrawLottery)
 AV.Cloud.define('fubaoFetchSendLuckyDip', fubaoCloud.fetchSendLuckyDip)
 AV.Cloud.define('fubaoFetchRecvedFubao', fubaoCloud.fetchRecvedFubao)
