@@ -56,6 +56,7 @@ export async function getWeappAuthData(request) {
     openid: originalAuthData.openid,
     session_key: originalAuthData.session_key
   }
+  console.log('authData', authData)
   if (!originalAuthData.unionid) {
     let data = decryptData(appid, authData.session_key, encryptedData , iv)
     if (data.unionId) {

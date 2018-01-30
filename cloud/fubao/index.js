@@ -281,7 +281,6 @@ export async function requestDrawLottery(userId, luckyDipId) {
       var ok = ch.assertExchange(ex, 'fanout', {durable: false})
       
       return ok.then(function() {
-        console.log("publish:", message)
         ch.publish(ex, '', Buffer.from(JSON.stringify(message)));
         return ch.close();
       });

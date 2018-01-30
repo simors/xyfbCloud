@@ -27,8 +27,7 @@ export function amqpDrawLotteryEvent(luckyDipId) {
       function handleQueueMessage(msg) {
         var body = msg.content.toString()
         var message = JSON.parse(body)
-      
-        console.log("queueMessage:", message)
+        
         let userId = message.userId
         let luckyDipId = message.luckyDipId
         let nodeId = message.nodeId
