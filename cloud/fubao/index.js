@@ -381,6 +381,27 @@ export async function fetchRecvedFubao(request) {
 }
 
 /**
+ * 根据抽奖箱id获取某个抽奖活动所有的参与者
+ * @param request
+ * @returns {Array}
+ */
+export async function fetchFubaoJoinUsers(request) {
+  let {luckyDipId} = request.params
+  
+  let query = new AV.Query('Fubao')
+  query.equalTo('luckyDip', luckyDipId)
+  query.include('user')
+  query.limit(100)
+  
+  let result = await query.find()
+  let joinUsers = []
+  result.forEach((fubao) => {
+    joinUsers.push(constructFubao(fubao, true, false))
+  })
+  return joinUsers
+}
+
+/**
  * 根据用户id和抽奖箱id获取对应的用户参与抽奖信息
  * @param userId
  * @param luckyDipId
