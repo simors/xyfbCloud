@@ -197,7 +197,7 @@ export async function handlePaymentWebhootsEvent(request) {
     await addDealRecord(mysqlConn, deal)
     switch (dealType) {
       case DEAL_TYPE.SEND_FUBAO:
-        await createLuckyDip(fromUser, amount, metadata.count, metadata.remark)
+        await createLuckyDip(fromUser, Number(amount), Number(metadata.count), metadata.remark)
         break
       default:
         console.error('unsupported deal type!')
