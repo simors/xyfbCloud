@@ -6,7 +6,7 @@ var amqp = require('amqplib')
 var websocketIO = require('../websocketIO')
 import {RABBITMQ_URL, NODE_ID} from '../config'
 import {execDrawLottery} from '../cloud/fubao'
-import {enterWithdrawQueue} from '../cloud/pay'
+import {enterWithdrawQueue, createInnerWithdrawRequest} from '../cloud/pay'
 
 export function amqpDrawLotteryEvent(luckyDipId) {
   return amqp.connect(RABBITMQ_URL).then((conn) => {
@@ -77,11 +77,16 @@ export function amqpWithdrawEvent() {
         let openid = message.openid
         let amount = message.amount
         let channel = message.channel
+        let dealType = message.dealType
         let nodeId = message.nodeId
         if (nodeId == NODE_ID) {
           console.log('recv withdraw message', message)
-          // enterWithdrawQueue(withdrawId, userId, openid, amount, channel)
-          ch.ack(msg)
+          createInnerWithdrawRequest(withdrawId, userId, openid, amount, channel, dealType).then(() => {
+            ch.ack(msg)
+          }).catch((err) => {
+            enterWithdrawQueue(withdrawId, userId, openid, amount, channel)
+            console.log("处理提现请求失败", err)
+          })
         }
       }
     })

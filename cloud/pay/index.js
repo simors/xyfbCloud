@@ -165,6 +165,69 @@ export async function createWithdrawRequest(request) {
 }
 
 /**
+ * 服务器内服发起的提现请求
+ * @param withdrawId
+ * @param userId
+ * @param openid
+ * @param amount
+ * @param channel
+ * @param dealType
+ * @returns {*}
+ */
+export async function createInnerWithdrawRequest(withdrawId, userId, openid, amount, channel, dealType) {
+  pingpp.setPrivateKeyPath(__dirname + "/rsa_private_key.pem")
+  
+  let walletInfo = await getWalletInfo(userId)
+  if(walletInfo.process != WALLET_PROCESS_TYPE.NORMAL_PROCESS) {
+    throw new AV.Cloud.Error('提现处理中', {code: errno.ERROR_IN_WITHDRAW_PROCESS})
+  }
+  
+  let mysqlConn = undefined
+  try {
+    mysqlConn = await mysqlUtil.getConnection()
+    await updateWalletProcess(mysqlConn, userId, WALLET_PROCESS_TYPE.WITHDRAW_PROCESS)
+    let transfer = await new Promise((resolve, reject) => {
+      const order_no = uuidv4().replace(/-/g, '').substr(0, 16)
+      pingpp.transfers.create({
+        order_no: order_no,
+        app: {id: PINGPP_APP_ID},
+        channel: channel,
+        amount: mathjs.chain(amount).multiply(100).done(),
+        currency: "cny",
+        type: "b2c",
+        recipient: openid,
+        extra: {},
+        description: "服务器自动发起提现" ,
+        metadata: {
+          'fromUser': 'platform',
+          'toUser': userId,
+          'dealType': dealType,
+          'operator': '',
+          'withdrawId': withdrawId,
+        },
+      }, function (err, transfer) {
+        if (err != null ) {
+          console.error(err)
+          updateWalletProcess(mysqlConn, userId, WALLET_PROCESS_TYPE.NORMAL_PROCESS)
+          reject(new AV.Cloud.Error('request transfer error' + err.message, {code: errno.ERROR_CREATE_TRANSFER}))
+        }
+        resolve(transfer)
+      })
+    })
+    return transfer
+  } catch (e) {
+    if(mysqlConn) {
+      await mysqlUtil.rollback(mysqlConn)
+    }
+    throw e
+  } finally {
+    if(mysqlConn) {
+      await mysqlUtil.release(mysqlConn)
+    }
+  }
+}
+
+/**
  * 处理ping++支付成功后的webhooks消息
  * @param request
  */
@@ -193,7 +256,6 @@ export async function handlePaymentWebhootsEvent(request) {
 
   let mysqlConn = undefined
   try {
-    let metadata = charge.metadata
     mysqlConn = await mysqlUtil.getConnection()
     await mysqlUtil.beginTransaction(mysqlConn)
     await addDealRecord(mysqlConn, deal)
@@ -210,6 +272,8 @@ export async function handlePaymentWebhootsEvent(request) {
     if(mysqlConn) {
       await mysqlUtil.rollback(mysqlConn)
     }
+    let metadata = charge.metadata
+    enterWithdrawQueue(metadata.withdrawId, toUser, deal.openid, amount, deal.channel)
     throw error
   } finally {
     if(mysqlConn) {
@@ -510,9 +574,11 @@ export async function createWithdrawApply(request) {
     if (!insertRes.results.insertId) {
       throw new AV.Cloud.Error('生成取现申请失败', {code: errno.EIO})
     }
-    console.log('insertId', insertRes.results.insertId)
-    console.log('result', insertRes.results)
-    enterWithdrawQueue(insertRes.results.insertId, userId, openid, amount, channel)
+    let dealType = undefined
+    if (applyType === WITHDRAW_APPLY_TYPE.WALLET_BALANCE) {
+      dealType = DEAL_TYPE.WITHDRAW
+    }
+    enterWithdrawQueue(insertRes.results.insertId, userId, openid, amount, channel, dealType)
     return insertRes.results
   } catch (e) {
     throw e
@@ -530,9 +596,10 @@ export async function createWithdrawApply(request) {
  * @param openid
  * @param amount
  * @param channel
+ * @param dealType
  * @returns {*}
  */
-export async function enterWithdrawQueue(withdrawId, userId, openid, amount, channel) {
+export async function enterWithdrawQueue(withdrawId, userId, openid, amount, channel, dealType) {
   let ex = 'xyfb_withdraw'
   let message = {
     withdrawId: withdrawId,
@@ -540,6 +607,7 @@ export async function enterWithdrawQueue(withdrawId, userId, openid, amount, cha
     openid: openid,
     amount: amount,
     channel: channel,
+    dealType: dealType,
     nodeId: NODE_ID,
   }
   return amqp.connect(RABBITMQ_URL).then(function(conn) {
