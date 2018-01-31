@@ -12,6 +12,8 @@ import mysqlUtil from '../mysqlUtil'
 import {getUserInfoById} from '../user'
 import {PINGPP_APP_ID, PINGPP_API_KEY} from '../../config'
 import {createLuckyDip} from '../fubao'
+import amqp from 'amqplib'
+import {RABBITMQ_URL, NODE_ID} from '../../config'
 
 var pingpp = Pingpp(PINGPP_API_KEY)
 
@@ -508,6 +510,9 @@ export async function createWithdrawApply(request) {
     if (!insertRes.results.insertId) {
       throw new AV.Cloud.Error('生成取现申请失败', {code: errno.EIO})
     }
+    console.log('insertId', insertRes.results.insertId)
+    console.log('result', insertRes.results)
+    enterWithdrawQueue(insertRes.results.insertId, userId, openid, amount, channel)
     return insertRes.results
   } catch (e) {
     throw e
@@ -516,6 +521,39 @@ export async function createWithdrawApply(request) {
       await mysqlUtil.release(conn)
     }
   }
+}
+
+/**
+ * 将提现请求加入处理队列
+ * @param withdrawId
+ * @param userId
+ * @param openid
+ * @param amount
+ * @param channel
+ * @returns {*}
+ */
+export async function enterWithdrawQueue(withdrawId, userId, openid, amount, channel) {
+  let ex = 'xyfb_withdraw'
+  let message = {
+    withdrawId: withdrawId,
+    userId: userId,
+    openid: openid,
+    amount: amount,
+    channel: channel,
+    nodeId: NODE_ID,
+  }
+  return amqp.connect(RABBITMQ_URL).then(function(conn) {
+    return conn.createChannel().then(function(ch) {
+      var ok = ch.assertExchange(ex, 'fanout', {durable: false})
+      
+      return ok.then(function() {
+        ch.publish(ex, '', Buffer.from(JSON.stringify(message)));
+        return ch.close();
+      });
+    }).finally(function() { conn.close(); });
+  }).catch((error) => {
+    throw error
+  })
 }
 
 /**
