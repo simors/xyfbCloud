@@ -462,8 +462,15 @@ export async function fubaoBalanceAccount(request) {
       break
     }
     luckyDips.forEach((luckyDip) => {
-      setLuckyDipExpire(luckyDip.id)
-      fubaoBalanceEntry(luckyDip.userId, Number(luckyDip.balance).toFixed(2))
+      let nowDate = moment().format('YYYY-MM-DD HH:mm:ss')
+      let createDate = luckyDip.createdAt
+      let expireDate = moment(createDate, 'YYYY-MM-DD HH:mm:ss').add(24, 'hours').format('YYYY-MM-DD HH:mm:ss')
+      if (nowDate >= expireDate) {
+        setLuckyDipExpire(luckyDip.id)
+      }
+      if (Number(luckyDip.balance).toFixed(2) > 0) {
+        fubaoBalanceEntry(luckyDip.userId, Number(luckyDip.balance).toFixed(2))
+      }
     })
   }
 }
