@@ -279,6 +279,9 @@ export async function requestDrawLottery(userId, luckyDipId) {
   if (luckyDip.isExpire) {
     throw new AV.Cloud.Error('The lucky dip is expire', {code: errno.ERROR_LUCKYDIP_EXPIRE});
   }
+  if (luckyDip.remain === 0) {
+    throw new AV.Cloud.Error('Fubao game over', {code: errno.ERROR_LUCKYDIP_GAME_OVER});
+  }
   let luckyDipUser = await getLuckyDipUser(userId, luckyDipId)
   if (!luckyDipUser) {
     await insertLuckyDipUser(userId, luckyDipId)
