@@ -6,7 +6,7 @@ import * as errno from '../errno'
 import moment from 'moment'
 import amqp from 'amqplib'
 import {constructUser} from '../user'
-import {winMoney} from '../pay'
+import {winMoney, fubaoBalanceEntry} from '../pay'
 import {RABBITMQ_URL, NODE_ID} from '../../config'
 
 const HIT_FACTOR = 3       // 中奖因子，如设置为5，则表示中奖概率为1/5
@@ -444,4 +444,53 @@ async function insertLuckyDipUser(userId, luckyDipId) {
 async function incLuckyDipParticipantNum(luckyDipUser) {
   luckyDipUser.increment('participateNum')
   return await luckyDipUser.save()
+}
+
+/**
+ * 福包结算
+ * @param requeset
+ */
+export async function fubaoBalanceAccount(request) {
+  console.log('begin to run fubao balance account timer')
+  let lastTime = undefined
+  let result = undefined
+  while (true) {
+    result = await getUnexpireLuckyDip(lastTime)
+    let luckyDips = result.luckyDips
+    lastTime = result.lastTime
+    if (luckyDips.length == 0) {
+      break
+    }
+    luckyDips.forEach((luckyDip) => {
+      setLuckyDipExpire(luckyDip.id)
+      fubaoBalanceEntry(luckyDip.userId, Number(luckyDip.balance).toFixed(2))
+    })
+  }
+}
+
+async function getUnexpireLuckyDip(lastTime) {
+  let query = new AV.Query('LuckyDip')
+  query.equalTo('isExpire', 0)
+  query.descending('createdAt')
+  if (lastTime) {
+    query.lessThan('createdAt', new Date(lastTime))
+  }
+  query.limit(1000)
+  let luckyDips = []
+  let result = await query.find()
+  result.forEach((ld) => {
+    luckyDips.push(constructLuckyDip(ld, false))
+  })
+  let size = luckyDips.length
+  let newLastTime = luckyDips[size-1].createdAt
+  return {
+    luckyDips,
+    lastTime: newLastTime
+  }
+}
+
+async function setLuckyDipExpire(luckyDipId) {
+  let luckyDip = AV.Object.createWithoutData('LuckyDip', luckyDipId)
+  luckyDip.set('isExpire', 1)
+  return await luckyDip.save()
 }

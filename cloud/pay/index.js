@@ -21,6 +21,7 @@ const DEAL_TYPE = {
   SEND_FUBAO: 1,    // 发福包
   RECV_FUBAO: 2,    // 抢到福包
   WITHDRAW: 3,      // 提现
+  FUBAO_BALANCE: 4, // 未领取的福包余额入账
 }
 
 // 钱包余额操作类型
@@ -500,6 +501,47 @@ export async function winMoney(userId, money) {
     await mysqlUtil.commit(mysqlConn)
   } catch (error) {
     console.error("winMoney", error)
+    if(mysqlConn) {
+      await mysqlUtil.rollback(mysqlConn)
+    }
+    throw error
+  } finally {
+    if (mysqlConn) {
+      await mysqlUtil.release(mysqlConn)
+    }
+  }
+}
+
+/**
+ * 未被领取的福包结算
+ * @param userId
+ * @param balance
+ */
+export async function fubaoBalanceEntry(userId, balance) {
+  if(!userId) {
+    throw new AV.Cloud.Error('参数错误', {code: errno.EINVAL})
+  }
+  let mysqlConn = undefined
+  let walletInfo = await getWalletInfo(userId)
+  
+  try {
+    mysqlConn = await mysqlUtil.getConnection()
+    await mysqlUtil.beginTransaction(mysqlConn)
+    await updateBalance(mysqlConn, userId, balance, WALLET_OPER.INCREMENT)
+    var deal = {
+      from: 'platform',
+      to: userId,
+      cost: balance,
+      deal_type: DEAL_TYPE.FUBAO_BALANCE,
+      charge_id: '',
+      order_no: uuidv4().replace(/-/g, '').substr(0, 16),
+      channel: '',
+      transaction_no: ''
+    }
+    await addDealRecord(mysqlConn, deal)
+    await mysqlUtil.commit(mysqlConn)
+  } catch (error) {
+    console.error("fubaoBalanceEntry", error)
     if(mysqlConn) {
       await mysqlUtil.rollback(mysqlConn)
     }
