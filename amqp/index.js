@@ -13,7 +13,7 @@ export function amqpDrawLotteryEvent() {
     let chName = 'draw_lottery'
     return conn.createChannel().then(function(ch) {
       //抽奖
-      let qName = 'draw_lottery_queue'
+      let qName = ''
       ch.assertExchange(chName, 'fanout', {durable: false}).then(() => {
         return ch.assertQueue(qName, {exclusive: true, autoDelete: true})
       }).then((qok) => {

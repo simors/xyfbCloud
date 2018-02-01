@@ -291,7 +291,7 @@ export async function requestDrawLottery(userId, luckyDipId) {
     }
   }
   
-  let ex = 'draw_lottery' + luckyDipId
+  let ex = 'draw_lottery'
   let message = {
     userId: userId,
     luckyDipId: luckyDipId,
