@@ -482,7 +482,10 @@ async function getUnexpireLuckyDip(lastTime) {
     luckyDips.push(constructLuckyDip(ld, false))
   })
   let size = luckyDips.length
-  let newLastTime = luckyDips[size-1].createdAt
+  let newLastTime = undefined
+  if (size > 0) {
+    newLastTime = luckyDips[size-1].createdAt
+  }
   return {
     luckyDips,
     lastTime: newLastTime
