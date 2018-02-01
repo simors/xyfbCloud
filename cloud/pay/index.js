@@ -45,7 +45,7 @@ const WITHDRAW_APPLY_TYPE = {
 }
 
 // 取现费率
-const WITHDRAW_FEE = 0.2
+const WITHDRAW_FEE = 0.02
 
 function constructDealRecord(dealRecord) {
   let deal = {}
@@ -128,7 +128,7 @@ export async function createWithdrawRequest(request) {
 
   let mysqlConn = undefined
   try {
-    let fee = mathjs.round(mathjs.chain(amount).multiply(100).multiply(WITHDRAW_FEE).done(), 2)
+    let fee = mathjs.round(mathjs.chain(amount).multiply(WITHDRAW_FEE).done(), 2)
     mysqlConn = await mysqlUtil.getConnection()
     await updateWalletProcess(mysqlConn, metadata.toUser, WALLET_PROCESS_TYPE.WITHDRAW_PROCESS)
     let transfer = await new Promise((resolve, reject) => {
@@ -137,7 +137,7 @@ export async function createWithdrawRequest(request) {
         order_no: order_no,
         app: {id: PINGPP_APP_ID},
         channel: channel,
-        amount: mathjs.round(mathjs.chain(amount).multiply(100).subtract(fee).done(), 2),
+        amount: mathjs.round(mathjs.chain(amount-fee).multiply(100).done(), 2),
         currency: "cny",
         type: "b2c",
         recipient: openid,
@@ -186,7 +186,7 @@ export async function createInnerWithdrawRequest(withdrawId, userId, openid, amo
   
   let mysqlConn = undefined
   try {
-    let fee = mathjs.round(mathjs.chain(amount).multiply(100).multiply(WITHDRAW_FEE).done(), 2)
+    let fee = mathjs.round(mathjs.chain(amount).multiply(WITHDRAW_FEE).done(), 2)
     mysqlConn = await mysqlUtil.getConnection()
     await updateWalletProcess(mysqlConn, userId, WALLET_PROCESS_TYPE.WITHDRAW_PROCESS)
     let transfer = await new Promise((resolve, reject) => {
@@ -195,7 +195,7 @@ export async function createInnerWithdrawRequest(withdrawId, userId, openid, amo
         order_no: order_no,
         app: {id: PINGPP_APP_ID},
         channel: channel,
-        amount: mathjs.round(mathjs.chain(amount).multiply(100).subtract(fee).done(), 2),
+        amount: mathjs.round(mathjs.chain(amount-fee).multiply(100).done(), 2),
         currency: "cny",
         type: "b2c",
         recipient: openid,
@@ -628,6 +628,7 @@ export async function createWithdrawApply(request) {
     enterWithdrawQueue(insertRes.results.insertId, userId, openid, amount, channel, dealType)
     return insertRes.results
   } catch (e) {
+    console.error('createWithdrawApply', e)
     throw e
   } finally {
     if (conn) {
