@@ -8,13 +8,14 @@ import {RABBITMQ_URL, NODE_ID} from '../config'
 import {execDrawLottery} from '../cloud/fubao'
 import {enterWithdrawQueue, createInnerWithdrawRequest} from '../cloud/pay'
 
-export function amqpDrawLotteryEvent(luckyDipId) {
+export function amqpDrawLotteryEvent() {
   return amqp.connect(RABBITMQ_URL).then((conn) => {
-    let chName = 'draw_lottery' + luckyDipId
+    let chName = 'draw_lottery'
     return conn.createChannel().then(function(ch) {
       //抽奖
+      let qName = 'draw_lottery_queue'
       ch.assertExchange(chName, 'fanout', {durable: false}).then(() => {
-        return ch.assertQueue('', {exclusive: true})
+        return ch.assertQueue(qName, {exclusive: true, autoDelete: true})
       }).then((qok) => {
         return ch.bindQueue(qok.queue, chName, '').then(function() {
           return qok.queue;

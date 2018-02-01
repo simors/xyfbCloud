@@ -6,7 +6,7 @@ import {amqpDrawLotteryEvent} from '../amqp'
 
 export async function socketDrawLotteryEvent(ws, userId, luckyDipId) {
   try {
-    await amqpDrawLotteryEvent(luckyDipId)
+    // await amqpDrawLotteryEvent(luckyDipId)
     await requestDrawLottery(userId, luckyDipId)
   } catch (error) {
     console.error(error)

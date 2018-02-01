@@ -4,6 +4,7 @@ require('babel-register')
 require("babel-polyfill")
 var AV = require('leanengine');
 var amqpWithdrawEvent = require('./amqp').amqpWithdrawEvent
+var amqpDrawLotteryEvent = require('./amqp').amqpDrawLotteryEvent
 
 AV.init({
   appId: process.env.LEANCLOUD_APP_ID,
@@ -18,6 +19,9 @@ var app = require('./app');
 
 // 创建提现队列
 amqpWithdrawEvent()
+
+// 创建抽奖队列
+amqpDrawLotteryEvent()
 
 // 端口一定要从环境变量 `LEANCLOUD_APP_PORT` 中获取。
 // LeanEngine 运行时会分配端口并赋值到该变量。
