@@ -42,7 +42,7 @@ export function amqpDrawLotteryEvent(luckyDipId) {
             websocketIO[userId].send(JSON.stringify({
               errcode: error.code, money: 0
             }))
-            console.log("处理活动请求失败", error)
+            console.log("处理抽奖请求失败", error)
           })
         }
       }
