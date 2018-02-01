@@ -238,7 +238,8 @@ function getRandomMoney(balance, remain) {
  */
 async function updateLuckyDipBalance(luckyDipId, money) {
   let luckyDip = AV.Object.createWithoutData('LuckyDip', luckyDipId)
-  luckyDip.increment('balance', -money)
+  let luckyDipObj = await getLuckyDipById(luckyDipId, false)
+  luckyDip.set('balance', Number(luckyDipObj.balance - money).toFixed(2))
   luckyDip.increment('remain', -1)
   return await luckyDip.save()
 }
