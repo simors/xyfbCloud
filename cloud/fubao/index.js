@@ -318,10 +318,24 @@ export async function requestDrawLottery(userId, luckyDipId) {
  * @returns {*}
  */
 export async function execDrawLottery(userId, luckyDipId) {
+  let luckyDip = await getLuckyDipById(luckyDipId, false)
+  if (luckyDip.isExpire) {
+    throw new AV.Cloud.Error('The lucky dip is expire', {code: errno.ERROR_LUCKYDIP_EXPIRE});
+  }
+  if (luckyDip.remain === 0) {
+    throw new AV.Cloud.Error('Fubao game over', {code: errno.ERROR_LUCKYDIP_GAME_OVER});
+  }
   let luckyDipUser = await getLuckyDipUser(userId, luckyDipId)
-  if (luckyDipUser) {
+  if (!luckyDipUser) {
+    luckyDipUser = await insertLuckyDipUser(userId, luckyDipId)
+    await incLuckyDipParticipantNum(luckyDipUser)
+  } else {
+    if (luckyDipUser.attributes.participateNum >= luckyDipUser.attributes.maxParticipateNum) {
+      throw new AV.Cloud.Error('The number of participant over', {code: errno.ERROR_LUCKYDIP_PARTICIPANT_OVER});
+    }
     await incLuckyDipParticipantNum(luckyDipUser)
   }
+  
   let money = await drawLottery(luckyDipId)
   if (money != 0) {
     await updateLuckyDipBalance(luckyDipId, money)
