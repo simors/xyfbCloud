@@ -44,6 +44,9 @@ const WITHDRAW_APPLY_TYPE = {
   WALLET_BALANCE: 1,        // 钱包余额
 }
 
+// 取现费率
+const WITHDRAW_FEE = 0.2
+
 function constructDealRecord(dealRecord) {
   let deal = {}
   deal.id = dealRecord.id
@@ -86,7 +89,7 @@ export async function createPaymentRequest(request) {
         client_ip: remoteAddress,
         currency: "cny",
         subject: subject,
-        body: "商品的描述信息",
+        body: "支付福包费用",
         extra: {
           open_id: openid
         },
@@ -125,6 +128,7 @@ export async function createWithdrawRequest(request) {
 
   let mysqlConn = undefined
   try {
+    let fee = mathjs.round(mathjs.chain(amount).multiply(100).multiply(WITHDRAW_FEE).done(), 2)
     mysqlConn = await mysqlUtil.getConnection()
     await updateWalletProcess(mysqlConn, metadata.toUser, WALLET_PROCESS_TYPE.WITHDRAW_PROCESS)
     let transfer = await new Promise((resolve, reject) => {
@@ -133,15 +137,12 @@ export async function createWithdrawRequest(request) {
         order_no: order_no,
         app: {id: PINGPP_APP_ID},
         channel: channel,
-        amount: mathjs.chain(amount).multiply(100).done(),
+        amount: mathjs.round(mathjs.chain(amount).multiply(100).subtract(fee).done(), 2),
         currency: "cny",
         type: "b2c",
         recipient: openid,
-        extra: {
-          // user_name: username,
-          // force_check: true,
-        },
-        description: "测试" ,
+        extra: {},
+        description: "余额取现" ,
         metadata: metadata,
       }, function (err, transfer) {
         if (err != null ) {
@@ -185,6 +186,7 @@ export async function createInnerWithdrawRequest(withdrawId, userId, openid, amo
   
   let mysqlConn = undefined
   try {
+    let fee = mathjs.round(mathjs.chain(amount).multiply(100).multiply(WITHDRAW_FEE).done(), 2)
     mysqlConn = await mysqlUtil.getConnection()
     await updateWalletProcess(mysqlConn, userId, WALLET_PROCESS_TYPE.WITHDRAW_PROCESS)
     let transfer = await new Promise((resolve, reject) => {
@@ -193,7 +195,7 @@ export async function createInnerWithdrawRequest(withdrawId, userId, openid, amo
         order_no: order_no,
         app: {id: PINGPP_APP_ID},
         channel: channel,
-        amount: mathjs.chain(amount).multiply(100).done(),
+        amount: mathjs.round(mathjs.chain(amount).multiply(100).subtract(fee).done(), 2),
         currency: "cny",
         type: "b2c",
         recipient: openid,
@@ -205,6 +207,7 @@ export async function createInnerWithdrawRequest(withdrawId, userId, openid, amo
           'dealType': dealType,
           'operator': '',
           'withdrawId': withdrawId,
+          'fee': fee
         },
       }, function (err, transfer) {
         if (err != null ) {
@@ -308,16 +311,18 @@ export async function handleWithdrawWebhootsEvent(request) {
     channel: transfer.channel,
     transaction_no: transfer.transaction_no,
     openid: transfer.recipient,
+    feeAmount: transfer.metadata.fee,
     metadata: transfer.metadata
   }
 
   let mysqlConn = undefined
   try {
+    let costAmount = mathjs.round(mathjs.chain(amount).add(transfer.metadata.fee).done(), 2)
     mysqlConn = await mysqlUtil.getConnection()
     await mysqlUtil.beginTransaction(mysqlConn)
     await addDealRecord(mysqlConn, deal)
     await confirmWithdraw(mysqlConn, operator, withdrawId)
-    await updateBalance(mysqlConn, deal.to, deal.cost, WALLET_OPER.MINUS)
+    await updateBalance(mysqlConn, deal.to, costAmount, WALLET_OPER.MINUS)
     await updateWalletProcess(mysqlConn, toUser, WALLET_PROCESS_TYPE.NORMAL_PROCESS)
     // TODO 增加业务处理逻辑
     await mysqlUtil.commit(mysqlConn)
