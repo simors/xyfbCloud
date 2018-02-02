@@ -223,6 +223,9 @@ function getRandomMoney(balance, remain) {
   if (remain === 1) {
     return Number(balance).toFixed(2) * 100 / 100
   }
+  if (remain === 0) {
+    return 0
+  }
   let min = 0.01
   let max = Number(100 * balance / (100 * remain) * 2).toFixed(2)
   let money = Math.random() * max
@@ -237,6 +240,7 @@ function getRandomMoney(balance, remain) {
  * @returns {T}
  */
 async function updateLuckyDipBalance(luckyDipId, money) {
+  console.log('dec balance with money', money)
   let luckyDip = AV.Object.createWithoutData('LuckyDip', luckyDipId)
   let luckyDipObj = await getLuckyDipById(luckyDipId, false)
   luckyDip.set('balance', Number(Number(luckyDipObj.balance).toFixed(2) - Number(money).toFixed(2)).toFixed(2))
