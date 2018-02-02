@@ -8,8 +8,9 @@ import amqp from 'amqplib'
 import {constructUser} from '../user'
 import {winMoney, fubaoBalanceEntry} from '../pay'
 import {RABBITMQ_URL, NODE_ID} from '../../config'
+import mathjs from 'mathjs'
 
-const HIT_FACTOR = 3       // 中奖因子，如设置为5，则表示中奖概率为1/5
+const HIT_FACTOR = 2       // 中奖因子，如设置为5，则表示中奖概率为1/5
 const DEFAULT_PARTICIPANT_NUM = 3     // 默认的抽奖次数
 
 function constructLuckyDip(leanLuckyDip, includeUser) {
@@ -221,16 +222,16 @@ async function drawLottery(luckyDipId) {
 function getRandomMoney(balance, remain) {
   // 只剩下最后一个福包，获取到剩余的所有金额
   if (remain === 1) {
-    return Number(balance).toFixed(2) * 100 / 100
+    return mathjs.round(balance, 2)
   }
   if (remain === 0) {
     return 0
   }
   let min = 0.01
-  let max = Number(100 * balance / (100 * remain) * 2).toFixed(2)
+  let max = mathjs.round(100 * balance / (100 * remain) * 2, 2)
   let money = Math.random() * max
   money = money <= min ? min : money
-  return Number(money).toFixed(2) * 100 / 100
+  return mathjs.round(money, 2)
 }
 
 /**
@@ -240,12 +241,17 @@ function getRandomMoney(balance, remain) {
  * @returns {T}
  */
 async function updateLuckyDipBalance(luckyDipId, money) {
-  console.log('dec balance with money', money)
   let luckyDip = AV.Object.createWithoutData('LuckyDip', luckyDipId)
   let luckyDipObj = await getLuckyDipById(luckyDipId, false)
-  luckyDip.set('balance', Number(Number(luckyDipObj.balance).toFixed(2) - Number(money).toFixed(2)).toFixed(2))
+  let newBalance = mathjs.round(luckyDipObj.balance - money, 2)
+  luckyDip.set('balance', newBalance)
   luckyDip.increment('remain', -1)
-  return await luckyDip.save()
+  try {
+    return await luckyDip.save()
+  } catch (e) {
+    console.error('updateLuckyDipBalance', e)
+    throw e
+  }
 }
 
 /**
@@ -490,8 +496,8 @@ export async function fubaoBalanceAccount(request) {
       if (nowDate >= expireDate) {
         setLuckyDipExpire(luckyDip.id)
       }
-      if (Number(luckyDip.balance).toFixed(2) > 0) {
-        fubaoBalanceEntry(luckyDip.userId, Number(luckyDip.balance).toFixed(2))
+      if (mathjs.round(luckyDip.balance, 2) > 0) {
+        fubaoBalanceEntry(luckyDip.userId, mathjs.round(luckyDip.balance, 2))
       }
     })
   }

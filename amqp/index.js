@@ -38,13 +38,13 @@ export function amqpDrawLotteryEvent() {
             websocketIO[userId].send(JSON.stringify({
               errcode: 0, money: result.money
             }))
-            ch.ack(msg)
           }).catch((error) => {
             websocketIO[userId].send(JSON.stringify({
               errcode: error.code, money: 0
             }))
             console.log("处理抽奖请求失败", error)
           })
+          ch.ack(msg)
         }
       }
     })
