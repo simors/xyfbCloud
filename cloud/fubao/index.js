@@ -550,5 +550,8 @@ export async function remainParticipateNum(request) {
   query.equalTo('luckyDip', luckyDip)
   query.equalTo('user', currentUser)
   let result = await query.first()
+  if (!result) {
+    return DEFAULT_PARTICIPANT_NUM
+  }
   return result.attributes.maxParticipateNum - result.attributes.participateNum
 }
