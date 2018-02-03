@@ -532,3 +532,23 @@ async function setLuckyDipExpire(luckyDipId) {
   luckyDip.set('isExpire', 1)
   return await luckyDip.save()
 }
+
+/**
+ * 获取某用户在某个抽奖中的剩余参与次数
+ * @param request
+ */
+export async function remainParticipateNum(request) {
+  let currentUser = request.currentUser
+  if (!currentUser) {
+    throw new AV.Cloud.Error('Permission denied, need to login first', {code: errno.EACCES});
+  }
+  
+  let {luckyDipId} = request.params
+  
+  let query = new AV.Query('LuckyDipUser')
+  let luckyDip = AV.Object.createWithoutData('LuckyDip', luckyDipId)
+  query.equalTo('luckyDip', luckyDip)
+  query.equalTo('user', currentUser)
+  let result = await query.first()
+  return result.attributes.maxParticipateNum - result.attributes.participateNum
+}
