@@ -495,9 +495,9 @@ export async function fubaoBalanceAccount(request) {
       let expireDate = moment(createDate, 'YYYY-MM-DD HH:mm:ss').add(24, 'hours').format('YYYY-MM-DD HH:mm:ss')
       if (nowDate >= expireDate) {
         setLuckyDipExpire(luckyDip.id)
-      }
-      if (mathjs.round(luckyDip.balance, 2) > 0) {
-        fubaoBalanceEntry(luckyDip.userId, mathjs.round(luckyDip.balance, 2))
+        if (mathjs.round(luckyDip.balance, 2) > 0) {
+          fubaoBalanceEntry(luckyDip.userId, mathjs.round(luckyDip.balance, 2))
+        }
       }
     })
   }
