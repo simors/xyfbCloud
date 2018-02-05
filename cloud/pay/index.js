@@ -624,8 +624,8 @@ export async function createWithdrawApply(request) {
     let dealType = undefined
     if (applyType === WITHDRAW_APPLY_TYPE.WALLET_BALANCE) {
       dealType = DEAL_TYPE.WITHDRAW
+      enterWithdrawQueue(insertRes.results.insertId, userId, openid, amount, channel, dealType)
     }
-    enterWithdrawQueue(insertRes.results.insertId, userId, openid, amount, channel, dealType)
     return insertRes.results
   } catch (e) {
     console.error('createWithdrawApply', e)
