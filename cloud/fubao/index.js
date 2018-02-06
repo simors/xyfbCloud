@@ -228,10 +228,14 @@ function getRandomMoney(balance, remain) {
     return 0
   }
   let min = 0.01
-  let max = mathjs.round(100 * balance / (100 * remain) * 2, 2)
-  let money = Math.random() * max
+  let avg = mathjs.round(100 * balance / (100 * remain), 2)
+  if (avg == min) {
+    return min
+  }
+  let max = avg * 2
+  let money = mathjs.round(Math.random() * max, 2)
   money = money <= min ? min : money
-  return mathjs.round(money, 2)
+  return money
 }
 
 /**
